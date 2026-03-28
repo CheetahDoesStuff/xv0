@@ -1,8 +1,15 @@
-; Infinite loop (e9 fd ff)
-loop:
-    jmp loop 
+mov ah, 0x0e ; tty mode
+mov al, 'H'
+int 0x10
+mov al, 'e'
+int 0x10
+mov al, 'l'
+int 0x10
+int 0x10 
+mov al, 'o'
+int 0x10
 
-; Fill with 510 zeros minus the size of the previous code
-times 510-($-$$) db 0
-; Magic number
+jmp $ ; inf loop lels
+
+times 510 - ($-$$) db 0
 dw 0xaa55 
