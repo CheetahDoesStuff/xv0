@@ -7,24 +7,31 @@
 use core::panic::PanicInfo;
 use xv0::println;
 
+
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
     println!("Hello World{}", "!");
 
+    xv0::init();
+
     #[cfg(test)]
     test_main();
-    loop {}
+
+    println!("It did not crash!");
+    xv0::hlt_loop();
 }
+
 
 #[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    loop {}
+    xv0::hlt_loop();
 }
 
 #[cfg(test)]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    xv0::test_panic_handler(info)
+    xv0::test_panic_handler(info);
+    xv0::hlt_loop();
 }
