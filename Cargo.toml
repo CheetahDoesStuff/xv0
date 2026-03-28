@@ -10,3 +10,9 @@ panic = "abort"
 
 [profile.release]
 panic = "abort"
+
+
+[[bin]]
+name = "xv0"
+test = false
+bench = false
