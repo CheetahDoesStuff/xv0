@@ -1,10 +1,8 @@
-[org 0x7c00]
+; Infinite loop (e9 fd ff)
+loop:
+    jmp loop 
 
-mov ah, 0x0e
-mov al 'H'
-int 0x10
-
-jmp $
-
+; Fill with 510 zeros minus the size of the previous code
 times 510-($-$$) db 0
-dw 0xaa55
+; Magic number
+dw 0xaa55 
