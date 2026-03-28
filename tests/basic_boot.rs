@@ -4,28 +4,21 @@
 #![test_runner(xv0::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+use xv0::{serial_println, test_panic_handler};
 use core::panic::PanicInfo;
-use xv0::println;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn _start() -> ! {
-    println!("Hello World{}", "!");
-
-    #[cfg(test)]
     test_main();
-
     loop {}
 }
 
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
-    println!("{}", info);
-    loop {}
+    test_panic_handler(info)
 }
 
-#[cfg(test)]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    xv0::test_panic_handler(info)
+#[test_case]
+fn always_pass() {
+    assert_eq!(1 + 1, 2);
 }
