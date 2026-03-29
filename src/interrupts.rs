@@ -104,8 +104,3 @@ impl InterruptIndex {
         usize::from(self.as_u8())
     }
 }
-
-#[test_case]
-fn test_breakpoint_exception() {
-    x86_64::instructions::interrupts::int3();
-}

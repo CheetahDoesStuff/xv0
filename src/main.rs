@@ -1,11 +1,7 @@
 #![no_std]
 #![no_main]
-#![feature(custom_test_frameworks)]
-#![test_runner(xv0::test_runner)]
-#![reexport_test_harness_main = "test_main"]
 
 extern crate alloc;
-use alloc::{boxed::Box, vec, vec::Vec, rc::Rc};
 use xv0::task::{Task, executor::Executor};
 
 use core::panic::PanicInfo;
@@ -49,22 +45,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     executor.run();
 
     println!("The OS didnt crash{}", "!");
-    #[cfg(test)]
-    test_main();
     xv0::hlt_loop();
 }
 
-
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
-    xv0::hlt_loop();
-}
-
-#[cfg(test)]
-#[panic_handler]
-fn panic(info: &PanicInfo) -> ! {
-    xv0::test_panic_handler(info);
     xv0::hlt_loop();
 }

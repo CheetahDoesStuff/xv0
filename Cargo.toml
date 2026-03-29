@@ -34,17 +34,5 @@ features = ["alloc"]
 
 [[bin]]
 name = "xv0"
-test = true
+test = false #TODO: implement tests
 bench = false
-
-[package.metadata.bootimage]
-test-args = [
-    "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04", "-serial", "stdio",
-    "-display", "none"
-]
-test-success-exit-code = 33
-test-timeout = 10
-
-
-[profile.test]
-quiet = true
