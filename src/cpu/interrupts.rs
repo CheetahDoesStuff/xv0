@@ -62,9 +62,9 @@ extern "x86-interrupt" fn page_fault_handler(
 } // Forward to drivers 
 
 use crate::drivers::{keyboard::keyboard_interrupt, timer::timer_interrupt};
-extern "x86-interrupt" fn timer_handler(frame: InterruptStackFrame) {
+extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
     timer_interrupt();
 }
-extern "x86-interrupt" fn keyboard_handler(frame: InterruptStackFrame) {
+extern "x86-interrupt" fn keyboard_handler(_frame: InterruptStackFrame) {
     keyboard_interrupt();
 }

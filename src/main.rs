@@ -3,7 +3,6 @@
 extern crate alloc;
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
-use x86_64::VirtAddr;
 use xv0::println;
 use xv0::task::{executor::Executor, keyboard::keyboard, task::Task};
 entry_point!(kernel_main);

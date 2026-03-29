@@ -1,7 +1,5 @@
 pub mod fixed_size_block;
 
-use alloc::alloc::{GlobalAlloc, Layout};
-use core::ptr::null_mut;
 use fixed_size_block::FixedSizeBlockAllocator;
 use spin::Mutex;
 
@@ -53,7 +51,7 @@ impl<A> Locked<A> {
         }
     }
 
-    pub fn lock(&self) -> spin::MutexGuard<A> {
+    pub fn lock(&self) -> spin::MutexGuard<'_, A> {
         self.inner.lock()
     }
 }
