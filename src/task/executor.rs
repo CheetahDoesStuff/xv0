@@ -1,6 +1,6 @@
-use super::{Task, TaskId};
+use crate::task::task::{Task, TaskId};
 use alloc::{collections::BTreeMap, sync::Arc, task::Wake};
-use core::task::{Waker, Context, Poll};
+use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
 
 pub struct Executor {
@@ -23,22 +23,25 @@ impl Executor {
         if self.tasks.insert(task_id, task).is_some() {
             panic!("Task with same ID already exists!")
         }
-        self.task_queue.push(task_id).expect("Task queue full! Couldnt push new task!");
+        self.task_queue
+            .push(task_id)
+            .expect("Task queue full! Couldnt push new task!");
     }
 
     fn run_ready_tasks(&mut self) {
         let Self {
             tasks,
             task_queue,
-            waker_cache
+            waker_cache,
         } = self;
 
         while let Some(task_id) = task_queue.pop() {
             let task = match tasks.get_mut(&task_id) {
                 Some(task) => task,
-                None => continue
+                None => continue,
             };
-            let waker = waker_cache.entry(task_id)
+            let waker = waker_cache
+                .entry(task_id)
                 .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
             let mut context = Context::from_waker(waker);
 
@@ -81,12 +84,14 @@ impl TaskWaker {
     fn new(task_id: TaskId, task_queue: Arc<ArrayQueue<TaskId>>) -> Waker {
         Waker::from(Arc::new(TaskWaker {
             task_id,
-            task_queue
+            task_queue,
         }))
     }
 
     fn wake_task(&self) {
-        self.task_queue.push(self.task_id).expect("Task queue is full! Cannot push task assigned to waker to queue!")
+        self.task_queue
+            .push(self.task_id)
+            .expect("Task queue is full! Cannot push task assigned to waker to queue!")
     }
 }
 

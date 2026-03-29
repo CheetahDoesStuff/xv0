@@ -1,9 +1,8 @@
-use volatile::Volatile;
+use core::fmt;
 use lazy_static::lazy_static;
 use spin::Mutex;
-use core::fmt;
+use volatile::Volatile;
 #[allow(dead_code)]
-
 // Colors
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -56,7 +55,7 @@ struct Buffer {
 pub struct Writer {
     column_pos: usize,
     col_code: ColorCode,
-    buffer: &'static mut Buffer
+    buffer: &'static mut Buffer,
 }
 
 impl Writer {
@@ -72,7 +71,10 @@ impl Writer {
                 let column = self.column_pos;
 
                 let col_code = self.col_code;
-                self.buffer.chars[row][column].write( ScreenChar { ascii_character: byte, color_code: col_code } );
+                self.buffer.chars[row][column].write(ScreenChar {
+                    ascii_character: byte,
+                    color_code: col_code,
+                });
                 self.column_pos += 1;
             }
         }
@@ -82,10 +84,10 @@ impl Writer {
         for row in 1..BUFFER_HEIGHT {
             for col in 0..BUFFER_WIDTH {
                 let char = self.buffer.chars[row][col].read();
-                self.buffer.chars[row-1][col].write(char);
+                self.buffer.chars[row - 1][col].write(char);
             }
         }
-        self.clear_row(BUFFER_HEIGHT-1);
+        self.clear_row(BUFFER_HEIGHT - 1);
         self.column_pos = 0;
     }
 

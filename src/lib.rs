@@ -1,21 +1,22 @@
 #![no_std]
 #![feature(abi_x86_interrupt)]
 
+use bootloader::BootInfo;
+
 extern crate alloc;
 
-use core::panic::PanicInfo;
-pub mod serial;
-pub mod vga_buffer;
-pub mod interrupts;
-pub mod gdt;
+pub mod cpu;
+pub mod drivers;
 pub mod memory;
-pub mod allocator;
+pub mod serial;
 pub mod task;
+pub mod vga_buffer;
 
-pub fn init() {
-    gdt::init();
-    interrupts::init_idt();
-    unsafe { interrupts::PICS.lock().initialize() };
+pub fn init(boot_info: &'static BootInfo) {
+    memory::gdt::init();
+    memory::init(boot_info);
+    cpu::interrupts::init_idt();
+    unsafe { cpu::interrupts::PICS.lock().initialize() };
     x86_64::instructions::interrupts::enable();
 }
 
