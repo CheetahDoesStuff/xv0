@@ -36,3 +36,4 @@ features = ["alloc"]
 name = "xv0"
 test = false #TODO: implement tests
 bench = false
+path = "src/main.rs"

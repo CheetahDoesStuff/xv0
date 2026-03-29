@@ -1,6 +1,6 @@
 use spin::Mutex;
 
-use crate::task::{executor::Executor, task::Task};
+use crate::kernel::task::{executor::Executor, task::Task};
 
 static GLOBAL_EXECUTOR: Mutex<Option<&'static mut Executor>> = Mutex::new(None);
 

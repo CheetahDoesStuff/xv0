@@ -1,3 +1,5 @@
+extern crate alloc;
+
 use alloc::boxed::Box;
 use core::sync::atomic::{AtomicU64, Ordering};
 use core::{

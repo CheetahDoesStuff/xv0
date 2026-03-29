@@ -62,6 +62,7 @@ impl Stream for ScancodeStream {
 }
 
 pub async fn print_keypresses() {
+    println!("Temporary thing to test keyboard input. Press keys to see them appear on screen.");
     let mut scancodes = ScancodeStream::new();
     let mut keyboard = Keyboard::new(
         ScancodeSet1::new(),

@@ -1,5 +1,5 @@
-use crate::cpu::interrupts::{InterruptIndex, PICS};
-use crate::task::keyboard::keyboard;
+use crate::kernel::cpu::interrupts::{InterruptIndex, PICS};
+use crate::kernel::task::keyboard::keyboard;
 use x86_64::instructions::port::Port;
 
 pub fn keyboard_interrupt() {

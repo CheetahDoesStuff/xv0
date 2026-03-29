@@ -1,4 +1,5 @@
-use crate::{hlt_loop, memory::gdt, println};
+use crate::kernel::{hlt_loop, memory::gdt};
+use crate::println;
 use lazy_static::lazy_static;
 use pic8259::ChainedPics;
 use spin::Mutex;
@@ -53,15 +54,14 @@ extern "x86-interrupt" fn page_fault_handler(
     stack_frame: InterruptStackFrame,
     error_code: x86_64::structures::idt::PageFaultErrorCode,
 ) {
-    use x86_64::registers::control::Cr2;
     println!("EXCEPTION: PAGE FAULT");
-    println!("Accessed Address: {:?}", Cr2::read());
+    println!("Accessed Address: {:?}", x86_64::registers::control::Cr2::read());
     println!("Error Code: {:?}", error_code);
     println!("{:#?}", stack_frame);
     hlt_loop();
 } // Forward to drivers 
 
-use crate::drivers::{keyboard::keyboard_interrupt, timer::timer_interrupt};
+use crate::kernel::drivers::{keyboard::keyboard_interrupt, timer::timer_interrupt};
 extern "x86-interrupt" fn timer_handler(_frame: InterruptStackFrame) {
     timer_interrupt();
 }

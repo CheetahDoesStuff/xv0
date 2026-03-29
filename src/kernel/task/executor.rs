@@ -1,4 +1,6 @@
-use crate::task::task::{Task, TaskId};
+extern crate alloc;
+
+use crate::kernel::task::task::{Task, TaskId};
 use alloc::{collections::BTreeMap, sync::Arc, task::Wake};
 use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;

@@ -1,4 +1,4 @@
-use crate::cpu::interrupts::{InterruptIndex, PICS};
+use crate::kernel::cpu::interrupts::{InterruptIndex, PICS};
 
 pub fn timer_interrupt() {
     unsafe {
