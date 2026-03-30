@@ -8,6 +8,7 @@ use core::{
 use crossbeam_queue::ArrayQueue;
 use futures_util::stream::{Stream, StreamExt};
 use futures_util::task::AtomicWaker;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts, KeyCode, KeyState};
 
 use alloc::{boxed::Box, vec::Vec};
@@ -21,7 +22,8 @@ static SCANCODE_WAKER: AtomicWaker = AtomicWaker::new();
 #[allow(dead_code)]
 static SCANCODE_WAKER_FALLBACK: () = ();
 
-static SUBSCRIBERS: OnceCell<Mutex<Vec<(&'static ArrayQueue<KeyEvent>, &'static AtomicWaker)>>> = OnceCell::uninit();
+static SUBSCRIBERS: OnceCell<Mutex<Vec<(usize, Box<ArrayQueue<KeyEvent>>, Box<AtomicWaker>)>>> = OnceCell::uninit();
+static NEXT_SUB_ID: AtomicUsize = AtomicUsize::new(1);
 pub static HELD_KEYS: OnceCell<Mutex<Vec<KeyCode>>> = OnceCell::uninit();
 
 #[derive(Copy, Clone, Debug)]
@@ -152,41 +154,59 @@ pub fn subscribe(capacity: usize) -> Subscriber {
     });
 
     let queue_box = Box::new(ArrayQueue::new(capacity));
-    let queue_ref: &'static ArrayQueue<KeyEvent> = Box::leak(queue_box);
-
     let waker_box = Box::new(AtomicWaker::new());
-    let waker_ref: &'static AtomicWaker = Box::leak(waker_box);
+    let id = NEXT_SUB_ID.fetch_add(1, Ordering::SeqCst);
 
     {
         let mut subs = subs_cell.lock();
-        subs.push((queue_ref, waker_ref));
+        subs.push((id, queue_box, waker_box));
     }
 
-    Subscriber {
-        queue: queue_ref,
-        waker: waker_ref,
+    Subscriber { id }
+}
+
+pub fn unsubscribe(id: usize) {
+    if let Ok(cell) = SUBSCRIBERS.try_get() {
+        let mut subs = cell.lock();
+        if let Some(pos) = subs.iter().position(|(sid, _, _)| *sid == id) {
+            subs.remove(pos);
+        }
     }
 }
 
 pub struct Subscriber {
-    queue: &'static ArrayQueue<KeyEvent>,
-    waker: &'static AtomicWaker,
+    id: usize,
+}
+
+impl Drop for Subscriber {
+    fn drop(&mut self) {
+        unsubscribe(self.id);
+    }
 }
 
 impl Stream for Subscriber {
     type Item = KeyEvent;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        if let Some(ev) = self.queue.pop() {
-            return Poll::Ready(Some(ev));
-        }
+        let subs_cell = match SUBSCRIBERS.try_get() {
+            Ok(c) => c,
+            Err(_) => return Poll::Ready(None),
+        };
 
-        self.waker.register(&cx.waker());
-        if let Some(ev) = self.queue.pop() {
-            self.waker.take();
-            Poll::Ready(Some(ev))
+        let mut subs = subs_cell.lock();
+
+        if let Some((_, queue_box, waker_box)) = subs.iter_mut().find(|(sid, _, _)| *sid == self.id) {
+            if let Some(ev) = queue_box.pop() {
+                return Poll::Ready(Some(ev));
+            }
+            waker_box.register(&cx.waker());
+            if let Some(ev) = queue_box.pop() {
+                waker_box.take();
+                return Poll::Ready(Some(ev));
+            }
+            return Poll::Pending;
         } else {
-            Poll::Pending
+            panic!("[kbd] Subscriber missing during poll");
         }
     }
 }
@@ -215,12 +235,12 @@ pub async fn keyboard_dispatcher() {
                         if let Some(ev) = keyboard.process_keyevent(event) {
                             let key_event: KeyEvent = ev.into();
                             let subs = subs_cell.lock();
-                            for (_, w) in subs.iter() {
-                                w.wake();
-                            }
-                            for (q, w) in subs.iter() {
+
+                            for (_, q, w) in subs.iter() {
                                 match q.push(key_event) {
-                                    Ok(()) => {}
+                                    Ok(()) => {
+                                        w.wake();
+                                    }
                                     Err(_) => {
                                         let _ = q.pop();
                                         match q.push(key_event) {
@@ -234,21 +254,19 @@ pub async fn keyboard_dispatcher() {
                             }
                         }
                     }
-                    Ok(None) => {
-                        println!("[kbd] dispatcher: add_byte returned None (incomplete sequence?)");
-                    }
+
+                    Ok(None) => {}
+
                     Err(e) => {
-                        println!("[kbd] dispatcher: keyboard.add_byte error: {:?}", e);
+                        println!("[kbd] Warning: Failed to add scancode {:#x}: {:?}", sc, e);
                     }
                 }
             }
+
             None => {
+                println!("[kbd] Warning: Scancode stream ended unexpectedly!");
                 break;
             }
         }
-    }
-
-    loop {
-        futures_util::future::pending::<()>().await;
     }
 }
