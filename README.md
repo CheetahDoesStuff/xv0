@@ -1,5 +1,5 @@
 # xv0
-*An operating system, not the best, but its an operating system, maybe*
+*An operating system, not the best, but its an operating system, kinda*
 
 **This OS is a hobby project, its very minimal and incomplete! Made for the "boot" hackclub YSWS**
 
