@@ -1,5 +1,5 @@
 # xv0
-*An operating system, not the best, but its an operating system, maybe*
+*An operating system, not the best, but its an operating system, kinda*
 
 **This OS is a hobby project, its very minimal and incomplete! Made for the "boot" hackclub YSWS**
 
@@ -34,3 +34,6 @@ cargo run
 
 ## Support
 If you encounter any issues, please make an github issue! Any bug reports or similar help me improve and polish the OS as i keep developing it.
+
+## License
+This project is dual-licensed under the Apache 2.0 and MIT license. 
