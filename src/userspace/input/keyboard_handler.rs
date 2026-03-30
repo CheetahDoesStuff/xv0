@@ -1,44 +1,48 @@
 extern crate alloc;
 
 use alloc::string::String;
-use pc_keyboard::KeyCode;
 
-use crate::{kernel::task::keyboard::keyboard::{KeyEvent, next_decoded_key}, println};
+use crate::{kernel::{task::keyboard::{interface::next_pressed_key, keyboard::KeyEvent}, vga_buffer::backspace}, print, println};
 
-pub async fn read_line() -> String {
+pub async fn read_line(print_input: bool) -> String {
     let mut line = String::new();
 
     loop {
-        let key = next_decoded_key().await;
+        let key = next_pressed_key().await;
         match key {
             KeyEvent::Unicode(ch) => {
                 if ch == '\n' || ch == '\r' {
-                    crate::println!();
-                    break;
-                } else {
-                    println!("Received char: '{}'", ch);
-                    line.push(ch);
-                    println!("{}", ch);
-                }
-            }
-            KeyEvent::Raw(code) => {
-                if matches!(code, KeyCode::Backspace) {
-                    if line.pop().is_some() {
-                        crate::print!("\u{8} \u{8}");
+                    if print_input {
+                        println!();
                     }
+                    break;
+                } else if ch == '\x08' {
+                    if print_input {
+                        backspace();
+                    }
+                    if !line.is_empty() {
+                        line.pop();
+                    }
+                } else {
+                    if print_input {
+                        print!("{}", ch);
+                    }
+                    line.push(ch);
                 }
             }
+            KeyEvent::Raw(_) => {}
         }
     }
 
     line
 }
-// ...existing code...
+
+
 
 pub async fn print_keypresses() {
     crate::println!("Press keys to see their decoded output...");
     loop {
-        let key = next_decoded_key().await;
-        crate::println!("Key pressed: {:?}", key);
+        let line = read_line(true).await;
+        crate::println!("You entered: {}", line);
     }
 }

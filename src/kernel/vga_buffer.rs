@@ -110,6 +110,22 @@ impl Writer {
             }
         }
     }
+
+    pub fn backspace(&mut self) {
+        if self.column_pos == 0 {
+            return;
+        }
+
+        self.column_pos -= 1;
+
+        let row = BUFFER_HEIGHT - 1;
+        let col = self.column_pos;
+
+        self.buffer.chars[row][col].write(ScreenChar {
+            ascii_character: b' ',
+            color_code: self.col_code,
+        });
+    }
 }
 
 impl fmt::Write for Writer {
@@ -146,5 +162,13 @@ pub fn _print(args: fmt::Arguments) {
 
     interrupts::without_interrupts(|| {
         WRITER.lock().write_fmt(args).unwrap();
+    });
+}
+
+pub fn backspace() {
+    use x86_64::instructions::interrupts;
+
+    interrupts::without_interrupts(|| {
+        WRITER.lock().backspace();
     });
 }

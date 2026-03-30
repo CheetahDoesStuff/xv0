@@ -8,13 +8,13 @@ use core::{
 use crossbeam_queue::ArrayQueue;
 use futures_util::stream::{Stream, StreamExt};
 use futures_util::task::AtomicWaker;
-use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts, KeyCode};
+use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts, KeyCode, KeyState};
 
 use alloc::{boxed::Box, vec::Vec};
 use spin::Mutex;
 
 
-use crate::{println, serial_println};
+use crate::{println};
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static SCANCODE_WAKER: AtomicWaker = AtomicWaker::new();
@@ -22,11 +22,21 @@ static SCANCODE_WAKER: AtomicWaker = AtomicWaker::new();
 static SCANCODE_WAKER_FALLBACK: () = ();
 
 static SUBSCRIBERS: OnceCell<Mutex<Vec<(&'static ArrayQueue<KeyEvent>, &'static AtomicWaker)>>> = OnceCell::uninit();
+pub static HELD_KEYS: OnceCell<Mutex<Vec<KeyCode>>> = OnceCell::uninit();
 
 #[derive(Copy, Clone, Debug)]
 pub enum KeyEvent {
     Unicode(char),
     Raw(KeyCode),
+}
+
+impl KeyEvent {
+    pub fn code_from_raw(&self) -> Option<KeyCode> {
+        match self {
+            KeyEvent::Raw(code) => Some(*code),
+            _ => None,
+        }
+    }
 }
 
 impl From<DecodedKey> for KeyEvent {
@@ -35,6 +45,28 @@ impl From<DecodedKey> for KeyEvent {
             DecodedKey::Unicode(c) => KeyEvent::Unicode(c),
             DecodedKey::RawKey(code) => KeyEvent::Raw(code),
         }
+    }
+}
+
+fn set_key_state(code: KeyCode, state: KeyState) {
+    let held_cell = HELD_KEYS.get_or_init(|| {
+        Mutex::new(Vec::new())
+    });
+
+    let mut held = held_cell.lock();
+    match state {
+        KeyState::Down => {
+            if !held.contains(&code) {
+                held.push(code);
+            }
+        }
+        KeyState::Up => {
+            if let Some(pos) = held.iter().position(|&k| k == code) {
+                held.remove(pos);
+            }
+        }
+
+        _ => {}
     }
 }
 
@@ -179,6 +211,7 @@ pub async fn keyboard_dispatcher() {
             Some(sc) => {
                 match keyboard.add_byte(sc) {
                     Ok(Some(event)) => {
+                        set_key_state(event.code, event.state);
                         if let Some(ev) = keyboard.process_keyevent(event) {
                             let key_event: KeyEvent = ev.into();
                             let subs = subs_cell.lock();
@@ -217,18 +250,5 @@ pub async fn keyboard_dispatcher() {
 
     loop {
         futures_util::future::pending::<()>().await;
-    }
-}
-
-pub async fn next_decoded_key() -> KeyEvent {
-    let mut subscriber = subscribe(16);
-
-    if let Some(ev) = subscriber.next().await {
-        serial_println!("[kbd] next_decoded_key received event: {:?}", ev); // Bro why does it stop working if i remove this log the fuuuuckkkk (switched it to serial, which rn does nothing because its broken lel)
-        ev
-    } else {
-        loop {
-            futures_util::future::pending::<()>().await;
-        }
     }
 }
