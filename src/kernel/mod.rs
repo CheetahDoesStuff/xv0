@@ -32,8 +32,8 @@ pub fn init(boot_info: &'static BootInfo) {
     crate::kernel::task::keyboard::keyboard::ScancodeStream::new();
     spawn_task(crate::kernel::task::task::Task::new(crate::kernel::task::keyboard::keyboard::keyboard_dispatcher()));
 
-    println!("Spawning keyboard task...");
-    spawn_task(crate::kernel::task::task::Task::new(crate::userspace::input::keyboard_handler::print_keypresses()));
+    println!("Spawning userspace...");
+    spawn_task(crate::kernel::task::task::Task::new(crate::userspace::main::userspace()));
 }
 
 pub fn hlt_loop() -> ! {

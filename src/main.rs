@@ -13,6 +13,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     xv0::kernel::init(boot_info);
     
     println!("Done! Starting executor...");
+    println!("------------ DONE ------------ ");
     run_global_executor();
     xv0::kernel::hlt_loop();
 }
