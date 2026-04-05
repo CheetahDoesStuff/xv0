@@ -19,8 +19,6 @@ use crate::{println};
 
 static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static SCANCODE_WAKER: AtomicWaker = AtomicWaker::new();
-#[allow(dead_code)]
-static SCANCODE_WAKER_FALLBACK: () = ();
 
 static SUBSCRIBERS: OnceCell<Mutex<Vec<(usize, Box<ArrayQueue<KeyEvent>>, Box<AtomicWaker>)>>> = OnceCell::uninit();
 static NEXT_SUB_ID: AtomicUsize = AtomicUsize::new(1);
