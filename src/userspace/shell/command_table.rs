@@ -2,13 +2,15 @@ extern crate arrayvec;
 
 type CommandFn = fn(&[&str]);
 
-struct Command {
-    name: &'static str,
-    func: CommandFn,
+pub struct Command {
+    pub name: &'static str,
+    pub func: CommandFn,
 }
 
-static COMMANDS: &[Command] = &[
+pub static COMMANDS: &[Command] = &[
     Command { name: "clear", func: crate::userspace::shell::commands::clear::clear },
+    Command { name: "help", func: crate::userspace::shell::commands::help::help },
+    Command { name: "commands", func: crate::userspace::shell::commands::commands::commands },
 ];
 
 pub fn dispatch(input: &str) {

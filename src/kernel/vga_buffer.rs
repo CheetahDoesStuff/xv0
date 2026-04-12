@@ -113,6 +113,8 @@ pub fn clear_screen() {
             fb.add(i).write_volatile(COLOR_BG);
         }
     }
+    WRITER.lock().col = 0;
+    WRITER.lock().row = 0;
 }
 
 pub fn draw_pixel(x: usize, y: usize, color: u8) {
