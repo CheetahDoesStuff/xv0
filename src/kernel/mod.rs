@@ -11,6 +11,7 @@ pub mod memory;
 pub mod serial;
 pub mod task;
 pub mod vga_buffer;
+pub mod shutdown;
 
 pub fn init(boot_info: &'static BootInfo) {
     println!("  - Initializing Global Descriptor Table (GDT)...");
@@ -23,6 +24,8 @@ pub fn init(boot_info: &'static BootInfo) {
     unsafe { cpu::interrupts::PICS.lock().initialize() };
     println!("    - Enabling interrupts...");
     x86_64::instructions::interrupts::enable();
+    println!("        - Initializing timer...");
+    crate::kernel::drivers::timer::init_pit();
     println!("  - Initializing task executor...");
     let executor = Executor::new();
     let exec_ref: &'static mut Executor = Box::leak(Box::new(executor));
