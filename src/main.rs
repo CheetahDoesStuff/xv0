@@ -2,19 +2,18 @@
 #![no_main]
 extern crate alloc;
 use bootloader::{BootInfo, entry_point};
-use xv0::kernel::task::global::{run_global_executor};
 use core::panic::PanicInfo;
-use xv0::println;
+use xv0::{kernel::start_executor, println};
 entry_point!(kernel_main);
 
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("----------- xv0 OS ----------- ");
+    println!("----------- xv0 OS -----------");
     println!("Initializing kernel...");
     xv0::kernel::init(boot_info);
     
     println!("Done! Starting executor...");
-    println!("------------ DONE ------------ ");
-    run_global_executor();
+    println!("------------ DONE ------------");
+    start_executor();
     xv0::kernel::hlt_loop();
 }
 

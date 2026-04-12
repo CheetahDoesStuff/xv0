@@ -5,7 +5,7 @@ edition = "2024"
 
 
 [dependencies]
-bootloader = { version = "0.9", features = ["map_physical_memory"]} # For some reason latest version errors? Ill just keep it here
+bootloader = { version = "0.9", features = ["map_physical_memory", "vga_320x200"] } # Bootloader v11 breaks because of literally 5600 errors in serde_core, sticking to v9
 volatile = "0.2.6" # Newer versions not compatible with the guide i was following at the start, may fix later
 spin = "0.10.0"
 x86_64 = "0.14.2"
@@ -13,6 +13,9 @@ uart_16550 = "0.2.0"
 pic8259 = "0.10.1"
 pc-keyboard = "0.7.0"
 linked_list_allocator = "0.9.0"
+serde = { version = "1.0", default-features = false }
+font8x8 = { version = "0.3", default-features = false }
+arrayvec = { version = "0.7", default-features = false }
 
 [dependencies.lazy_static]
 version = "1.0"
@@ -37,3 +40,6 @@ name = "xv0"
 test = false #TODO: implement tests
 bench = false
 path = "src/main.rs"
+
+[patch.crates-io]
+serde = { git = "https://github.com/serde-rs/serde", tag = "v1.0.219" }

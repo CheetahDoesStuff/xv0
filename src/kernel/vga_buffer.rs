@@ -1,62 +1,23 @@
-use core::{clone::Clone, cmp::{Eq, PartialEq}, fmt::{self, Debug}, marker::Copy, prelude::v1::derive, result::Result::Ok};
+use core::fmt;
+use font8x8::legacy::BASIC_LEGACY;
 use lazy_static::lazy_static;
 use spin::Mutex;
-use volatile::Volatile;
 
-#[allow(dead_code)]
-// Colors
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(u8)]
-pub enum Color {
-    Black = 0,
-    Blue = 1,
-    Green = 2,
-    Cyan = 3,
-    Red = 4,
-    Magenta = 5,
-    Brown = 6,
-    LightGray = 7,
-    DarkGray = 8,
-    LightBlue = 9,
-    LightGreen = 10,
-    LightCyan = 11,
-    LightRed = 12,
-    Pink = 13,
-    Yellow = 14,
-    White = 15,
-}
+const WIDTH: usize = 320;
+const HEIGHT: usize = 200;
+const FRAMEBUFFER: usize = 0xa0000;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(transparent)]
-struct ColorCode(u8);
+const CHAR_W: usize = 8;
+const CHAR_H: usize = 8;
+const COLS: usize = WIDTH / CHAR_W;
+const ROWS: usize = HEIGHT / CHAR_H;
 
-impl ColorCode {
-    fn new(foreground: Color, background: Color) -> ColorCode {
-        ColorCode((background as u8) << 4 | (foreground as u8))
-    }
-}
+const COLOR_BG: u8 = 0;
+const COLOR_FG: u8 = 15;
 
-// Character to be displayed
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[repr(C)]
-struct ScreenChar {
-    ascii_character: u8,
-    color_code: ColorCode,
-}
-
-// Buffer
-const BUFFER_HEIGHT: usize = 25;
-const BUFFER_WIDTH: usize = 80;
-#[repr(transparent)]
-struct Buffer {
-    chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
-}
-
-// Writing buffer to screen
 pub struct Writer {
-    column_pos: usize,
-    col_code: ColorCode,
-    buffer: &'static mut Buffer,
+    col: usize,
+    row: usize,
 }
 
 impl Writer {
@@ -64,67 +25,73 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             byte => {
-                if self.column_pos >= BUFFER_WIDTH {
+                if self.col >= COLS {
                     self.new_line();
                 }
-
-                let row = BUFFER_HEIGHT - 1;
-                let column = self.column_pos;
-
-                let col_code = self.col_code;
-                self.buffer.chars[row][column].write(ScreenChar {
-                    ascii_character: byte,
-                    color_code: col_code,
-                });
-                self.column_pos += 1;
+                self.draw_char(self.col, self.row, byte);
+                self.col += 1;
             }
         }
     }
 
-    fn new_line(&mut self) {
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let char = self.buffer.chars[row][col].read();
-                self.buffer.chars[row - 1][col].write(char);
-            }
-        }
-        self.clear_row(BUFFER_HEIGHT - 1);
-        self.column_pos = 0;
-    }
-
-    fn clear_row(&mut self, row: usize) {
-        let blank = ScreenChar {
-            ascii_character: b' ',
-            color_code: self.col_code,
-        };
-        for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
-        }
-    }
-
-    pub fn write_str(&mut self, str: &str) {
-        for byte in str.bytes() {
+    pub fn write_str(&mut self, s: &str) {
+        for byte in s.bytes() {
             match byte {
                 0x20..=0x7e | b'\n' => self.write_byte(byte),
-                _ => self.write_byte(0xfe),
+                _ => self.write_byte(b'?'),
             }
         }
     }
 
     pub fn backspace(&mut self) {
-        if self.column_pos == 0 {
-            return;
+        if self.col == 0 {
+            if self.row == 0 { return; }
+            self.row -= 1;
+            self.col = COLS - 1;
+        } else {
+            self.col -= 1;
         }
+        self.draw_char(self.col, self.row, b' ');
+    }
 
-        self.column_pos -= 1;
+    fn new_line(&mut self) {
+        if self.row < ROWS - 1 {
+            self.row += 1;
+        } else {
+            self.scroll();
+        }
+        self.col = 0;
+    }
 
-        let row = BUFFER_HEIGHT - 1;
-        let col = self.column_pos;
+    fn scroll(&mut self) {
+        let fb = FRAMEBUFFER as *mut u8;
+        unsafe {
+            core::ptr::copy(
+                fb.add(WIDTH * CHAR_H),
+                fb,
+                WIDTH * (HEIGHT - CHAR_H),
+            );
+            for i in WIDTH * (HEIGHT - CHAR_H)..WIDTH * HEIGHT {
+                fb.add(i).write_volatile(COLOR_BG);
+            }
+        }
+    }
 
-        self.buffer.chars[row][col].write(ScreenChar {
-            ascii_character: b' ',
-            color_code: self.col_code,
-        });
+    fn draw_char(&self, col: usize, row: usize, c: u8) {
+        let glyph = &BASIC_LEGACY[c.min(127) as usize];
+        let base_x = col * CHAR_W;
+        let base_y = row * CHAR_H;
+        let fb = FRAMEBUFFER as *mut u8;
+        for (y, row_bits) in glyph.iter().enumerate() {
+            for x in 0..CHAR_W {
+                let on = (row_bits >> x) & 1 == 1;
+                let color = if on { COLOR_FG } else { COLOR_BG };
+                unsafe {
+                    fb.add((base_y + y) * WIDTH + base_x + x)
+                        .write_volatile(color);
+                }
+            }
+        }
     }
 }
 
@@ -136,14 +103,28 @@ impl fmt::Write for Writer {
 }
 
 lazy_static! {
-    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
-        column_pos: 0,
-        col_code: ColorCode::new(Color::White, Color::Black),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
-    });
+    pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer { col: 0, row: 0 });
 }
 
-// Custom print and println macros!
+pub fn clear_screen() {
+    let fb = FRAMEBUFFER as *mut u8;
+    unsafe {
+        for i in 0..WIDTH * HEIGHT {
+            fb.add(i).write_volatile(COLOR_BG);
+        }
+    }
+}
+
+pub fn draw_pixel(x: usize, y: usize, color: u8) {
+    if x < WIDTH && y < HEIGHT {
+        unsafe {
+            (FRAMEBUFFER as *mut u8)
+                .add(y * WIDTH + x)
+                .write_volatile(color);
+        }
+    }
+}
+
 #[macro_export]
 macro_rules! print {
     ($($arg:tt)*) => ($crate::kernel::vga_buffer::_print(format_args!($($arg)*)));
@@ -159,7 +140,6 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     use x86_64::instructions::interrupts;
-
     interrupts::without_interrupts(|| {
         WRITER.lock().write_fmt(args).unwrap();
     });
@@ -167,7 +147,6 @@ pub fn _print(args: fmt::Arguments) {
 
 pub fn backspace() {
     use x86_64::instructions::interrupts;
-
     interrupts::without_interrupts(|| {
         WRITER.lock().backspace();
     });

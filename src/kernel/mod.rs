@@ -1,7 +1,7 @@
 use bootloader::BootInfo;
 use alloc::boxed::Box;
 
-use crate::{kernel::task::{executor::Executor, global::spawn_task}, println};
+use crate::{kernel::task::{executor::Executor, global::{spawn_task}}, println};
 
 extern crate alloc;
 
@@ -34,6 +34,10 @@ pub fn init(boot_info: &'static BootInfo) {
 
     println!("Spawning userspace...");
     spawn_task(crate::kernel::task::task::Task::new(crate::userspace::main::userspace()));
+}
+
+pub fn start_executor() {
+    crate::kernel::task::global::run_global_executor();
 }
 
 pub fn hlt_loop() -> ! {

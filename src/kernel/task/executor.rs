@@ -1,6 +1,6 @@
 extern crate alloc;
 
-use crate::kernel::task::task::{Task, TaskId};
+use crate::{kernel::task::task::{Task, TaskId}};
 use alloc::{collections::BTreeMap, sync::Arc, task::Wake};
 use core::task::{Context, Poll, Waker};
 use crossbeam_queue::ArrayQueue;
@@ -9,6 +9,7 @@ pub struct Executor {
     tasks: BTreeMap<TaskId, Task>,
     task_queue: Arc<ArrayQueue<TaskId>>,
     waker_cache: BTreeMap<TaskId, Waker>,
+    spawn_queue: Arc<ArrayQueue<Task>>,
 }
 
 impl Executor {
@@ -17,24 +18,35 @@ impl Executor {
             tasks: BTreeMap::new(),
             task_queue: Arc::new(ArrayQueue::new(100)),
             waker_cache: BTreeMap::new(),
+            spawn_queue: Arc::new(ArrayQueue::new(100)),
         }
+    }
+
+    pub fn spawn_queue(&self) -> Arc<ArrayQueue<Task>> {
+        self.spawn_queue.clone()
     }
 
     pub fn spawn(&mut self, task: Task) {
         let task_id = task.id;
         if self.tasks.insert(task_id, task).is_some() {
-            panic!("Task with same ID already exists!")
+            panic!("Task with same ID already exists!");
         }
-        self.task_queue
-            .push(task_id)
-            .expect("Task queue full! Couldnt push new task!");
+        self.task_queue.push(task_id).expect("Task queue full!");
+    }
+
+    fn drain_spawn_queue(&mut self) {
+        while let Some(task) = self.spawn_queue.pop() {
+            self.spawn(task);
+        }
     }
 
     fn run_ready_tasks(&mut self) {
+        self.drain_spawn_queue();
         let Self {
             tasks,
             task_queue,
             waker_cache,
+            spawn_queue: _,
         } = self;
 
         while let Some(task_id) = task_queue.pop() {
@@ -46,7 +58,6 @@ impl Executor {
                 .entry(task_id)
                 .or_insert_with(|| TaskWaker::new(task_id, task_queue.clone()));
             let mut context = Context::from_waker(waker);
-
             match task.poll(&mut context) {
                 Poll::Ready(()) => {
                     tasks.remove(&task_id);
@@ -69,7 +80,7 @@ impl Executor {
 
         interrupts::disable();
 
-        if self.task_queue.is_empty() {
+        if self.task_queue.is_empty() && self.spawn_queue.is_empty() {
             enable_and_hlt();
         } else {
             interrupts::enable();
