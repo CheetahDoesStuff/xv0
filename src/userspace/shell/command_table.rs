@@ -13,7 +13,6 @@ pub static COMMANDS: &[Command] = &[
     Command { name: "commands", func: crate::userspace::shell::commands::commands::commands },
     Command { name: "echo", func: crate::userspace::shell::commands::echo::echo },
     Command { name: "exit", func: crate::kernel::shutdown::shutdown },
-    Command { name: "doom", func: crate::userspace::shell::commands::doom::doom },
 ];
 
 pub fn dispatch(input: &str) {
