@@ -11,6 +11,7 @@
 - Curl and Git installed
 - Rustup
 - Qemu (full version, aka with gtk gui)
+- Doom1 WAD (I recommend freedoom, which is whats used for prebuilt releases)
 
 ### Cloning the repo
 Just clone the repo:
@@ -26,10 +27,12 @@ rustup default nightly
 cargo install bootimage
 ```
 
+To be able to build the program you also need to provide some sort of DOOM wad file, this can be any DOOM wad file, but its recommended to use one of the freedoom wad files. Simply put your WAD file in the root directory and rename it to `doom1.wad`.
+
 ### Running the program
 `bootimage` plugs directly into the default run command so we dont have to do anything with `make` (`gmake`) and we can compile the OS and automatically launch qemu with a single command:
 ```sh
-cargo run
+cargo run --release
 ```
 
 ## Support

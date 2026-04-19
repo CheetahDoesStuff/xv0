@@ -1,0 +1,42 @@
+name: Build and Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache doom1.wad
+        id: cache-wad
+        uses: actions/cache@v4
+        with:
+          path: doom1.wad
+          key: doom1-wad-v1
+
+      - name: Download doom1.wad (if not cached)
+        if: steps.cache-wad.outputs.cache-hit != 'true'
+        run: curl -L -o doom1.wad https://raw.githubusercontent.com/redox-os/freedoom/master/doom1.wad
+
+      - name: Build release binary
+        run: cargo build --release
+
+      - name: Create image
+        run: |
+          BIN="target/x86_64-cheetah-vx0/release/bootimage-xv0.bin"
+          IMG="xv0-release-${{ github.ref_name }}.img"
+          cp "$BIN" "$IMG"
+          echo "IMG=$IMG" >> $GITHUB_ENV
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.IMG }}
