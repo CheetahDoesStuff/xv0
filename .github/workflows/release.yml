@@ -15,8 +15,9 @@ jobs:
       - name: Install Rust (nightly)
         uses: dtolnay/rust-toolchain@nightly
         with:
+          toolchain: nightly
+          override: true
           components: rust-src
-
       - name: Cache doom1.wad
         id: cache-wad
         uses: actions/cache@v4
@@ -30,12 +31,12 @@ jobs:
 
       - name: Build release binary
         run: >
-          cargo +nightly build --release 
+          cargo build --release 
           -Z build-std=core,alloc 
           -Z unstable-options 
           -Z json-target-spec 
           --target x86_64-cheetah-vx0.json
-          
+
       - name: Create image
         run: |
           BIN="target/x86_64-cheetah-vx0/release/bootimage-xv0.bin"
