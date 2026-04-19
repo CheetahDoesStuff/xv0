@@ -8,11 +8,30 @@ pub struct Command {
 }
 
 pub static COMMANDS: &[Command] = &[
-    Command { name: "clear", func: crate::userspace::shell::commands::clear::clear },
-    Command { name: "help", func: crate::userspace::shell::commands::help::help },
-    Command { name: "commands", func: crate::userspace::shell::commands::commands::commands },
-    Command { name: "echo", func: crate::userspace::shell::commands::echo::echo },
-    Command { name: "exit", func: crate::kernel::shutdown::shutdown },
+    Command {
+        name: "clear",
+        func: crate::userspace::shell::commands::clear::clear,
+    },
+    Command {
+        name: "help",
+        func: crate::userspace::shell::commands::help::help,
+    },
+    Command {
+        name: "commands",
+        func: crate::userspace::shell::commands::commands::commands,
+    },
+    Command {
+        name: "echo",
+        func: crate::userspace::shell::commands::echo::echo,
+    },
+    Command {
+        name: "exit",
+        func: crate::kernel::shutdown::shutdown,
+    },
+    Command {
+        name: "doom",
+        func: crate::userspace::shell::commands::doom::doom_command,
+    },
 ];
 
 pub fn dispatch(input: &str) {

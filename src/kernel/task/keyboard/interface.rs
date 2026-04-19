@@ -4,8 +4,7 @@ use futures_util::StreamExt;
 use pc_keyboard::KeyCode;
 use spin::Mutex;
 
-use crate::{kernel::task::keyboard::keyboard::{HELD_KEYS, KeyEvent, subscribe}};
-
+use crate::kernel::task::keyboard::keyboard::{HELD_KEYS, KeyEvent, subscribe};
 
 pub async fn next_pressed_key() -> KeyEvent {
     let mut subscriber = subscribe(16);

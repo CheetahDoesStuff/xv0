@@ -1,6 +1,7 @@
 extern crate alloc;
 
 use conquer_once::spin::OnceCell;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use core::{
     pin::Pin,
     task::{Context, Poll},
@@ -8,19 +9,18 @@ use core::{
 use crossbeam_queue::ArrayQueue;
 use futures_util::stream::{Stream, StreamExt};
 use futures_util::task::AtomicWaker;
-use core::sync::atomic::{AtomicUsize, Ordering};
-use pc_keyboard::{DecodedKey, HandleControl, Keyboard, ScancodeSet1, layouts, KeyCode, KeyState};
+use pc_keyboard::{DecodedKey, HandleControl, KeyCode, KeyState, Keyboard, ScancodeSet1, layouts};
 
 use alloc::{boxed::Box, vec::Vec};
 use spin::Mutex;
 
+use crate::println;
 
-use crate::{println};
-
-static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
+pub static SCANCODE_QUEUE: OnceCell<ArrayQueue<u8>> = OnceCell::uninit();
 static SCANCODE_WAKER: AtomicWaker = AtomicWaker::new();
 
-static SUBSCRIBERS: OnceCell<Mutex<Vec<(usize, Box<ArrayQueue<KeyEvent>>, Box<AtomicWaker>)>>> = OnceCell::uninit();
+static SUBSCRIBERS: OnceCell<Mutex<Vec<(usize, Box<ArrayQueue<KeyEvent>>, Box<AtomicWaker>)>>> =
+    OnceCell::uninit();
 static NEXT_SUB_ID: AtomicUsize = AtomicUsize::new(1);
 pub static HELD_KEYS: OnceCell<Mutex<Vec<KeyCode>>> = OnceCell::uninit();
 
@@ -49,9 +49,7 @@ impl From<DecodedKey> for KeyEvent {
 }
 
 fn set_key_state(code: KeyCode, state: KeyState) {
-    let held_cell = HELD_KEYS.get_or_init(|| {
-        Mutex::new(Vec::new())
-    });
+    let held_cell = HELD_KEYS.get_or_init(|| Mutex::new(Vec::new()));
 
     let mut held = held_cell.lock();
     match state {
@@ -72,16 +70,17 @@ fn set_key_state(code: KeyCode, state: KeyState) {
 
 pub(crate) fn add_scancode(scancode: u8) {
     match SCANCODE_QUEUE.try_get() {
-        Ok(queue) => {
-            match queue.push(scancode) {
-                Ok(()) => {
-                    SCANCODE_WAKER.wake();
-                }
-                Err(_) => {
-                    println!("[kbd] Warning: Scancode queue full, dropping keyboard input {:#x}!", scancode);
-                }
+        Ok(queue) => match queue.push(scancode) {
+            Ok(()) => {
+                SCANCODE_WAKER.wake();
             }
-        }
+            Err(_) => {
+                println!(
+                    "[kbd] Warning: Scancode queue full, dropping keyboard input {:#x}!",
+                    scancode
+                );
+            }
+        },
         Err(_) => {
             println!("[kbd] Warning: Scancode queue uninitialized!");
         }
@@ -94,9 +93,7 @@ pub struct ScancodeStream {
 
 impl ScancodeStream {
     pub fn new() -> Self {
-        let _ = SCANCODE_QUEUE.try_init_once(|| {
-            ArrayQueue::new(100)
-        });
+        let _ = SCANCODE_QUEUE.try_init_once(|| ArrayQueue::new(100));
         ScancodeStream { _private: () }
     }
 }
@@ -125,31 +122,21 @@ impl Stream for ScancodeStream {
                 }
                 Poll::Ready(Some(sc))
             }
-            None => {
-                Poll::Pending
-            }
+            None => Poll::Pending,
         }
     }
 }
 
 pub fn init() {
-    let res = SCANCODE_QUEUE.try_init_once(|| {
-        ArrayQueue::new(100)
-    });
-    if res.is_err() {
-    }
+    let res = SCANCODE_QUEUE.try_init_once(|| ArrayQueue::new(100));
+    if res.is_err() {}
 
-    let res2 = SUBSCRIBERS.try_init_once(|| {
-        Mutex::new(Vec::new())
-    });
-    if res2.is_err() {
-    }
+    let res2 = SUBSCRIBERS.try_init_once(|| Mutex::new(Vec::new()));
+    if res2.is_err() {}
 }
 
 pub fn subscribe(capacity: usize) -> Subscriber {
-    let subs_cell = SUBSCRIBERS.get_or_init(|| {
-        Mutex::new(Vec::new())
-    });
+    let subs_cell = SUBSCRIBERS.get_or_init(|| Mutex::new(Vec::new()));
 
     let queue_box = Box::new(ArrayQueue::new(capacity));
     let waker_box = Box::new(AtomicWaker::new());
@@ -193,7 +180,8 @@ impl Stream for Subscriber {
 
         let mut subs = subs_cell.lock();
 
-        if let Some((_, queue_box, waker_box)) = subs.iter_mut().find(|(sid, _, _)| *sid == self.id) {
+        if let Some((_, queue_box, waker_box)) = subs.iter_mut().find(|(sid, _, _)| *sid == self.id)
+        {
             if let Some(ev) = queue_box.pop() {
                 return Poll::Ready(Some(ev));
             }
@@ -210,12 +198,8 @@ impl Stream for Subscriber {
 }
 
 pub async fn keyboard_dispatcher() {
-    let _ = SCANCODE_QUEUE.try_init_once(|| {
-        ArrayQueue::new(100)
-    });
-    let subs_cell = SUBSCRIBERS.get_or_init(|| {
-        Mutex::new(Vec::new())
-    });
+    let _ = SCANCODE_QUEUE.try_init_once(|| ArrayQueue::new(100));
+    let subs_cell = SUBSCRIBERS.get_or_init(|| Mutex::new(Vec::new()));
 
     let mut scancodes = ScancodeStream::new();
     let mut keyboard = Keyboard::new(
@@ -226,40 +210,41 @@ pub async fn keyboard_dispatcher() {
 
     loop {
         match scancodes.next().await {
-            Some(sc) => {
-                match keyboard.add_byte(sc) {
-                    Ok(Some(event)) => {
-                        set_key_state(event.code, event.state);
-                        if let Some(ev) = keyboard.process_keyevent(event) {
-                            let key_event: KeyEvent = ev.into();
-                            let subs = subs_cell.lock();
+            Some(sc) => match keyboard.add_byte(sc) {
+                Ok(Some(event)) => {
+                    set_key_state(event.code, event.state);
+                    if let Some(ev) = keyboard.process_keyevent(event) {
+                        let key_event: KeyEvent = ev.into();
+                        let subs = subs_cell.lock();
 
-                            for (_, q, w) in subs.iter() {
-                                match q.push(key_event) {
-                                    Ok(()) => {
-                                        w.wake();
-                                    }
-                                    Err(_) => {
-                                        let _ = q.pop();
-                                        match q.push(key_event) {
-                                            Ok(()) => w.wake(),
-                                            Err(_) => {
-                                                println!("[kbd] Warning: Subscriber queue full, dropping key event: {:?}", key_event);
-                                            }
+                        for (_, q, w) in subs.iter() {
+                            match q.push(key_event) {
+                                Ok(()) => {
+                                    w.wake();
+                                }
+                                Err(_) => {
+                                    let _ = q.pop();
+                                    match q.push(key_event) {
+                                        Ok(()) => w.wake(),
+                                        Err(_) => {
+                                            println!(
+                                                "[kbd] Warning: Subscriber queue full, dropping key event: {:?}",
+                                                key_event
+                                            );
                                         }
                                     }
                                 }
                             }
                         }
                     }
-
-                    Ok(None) => {}
-
-                    Err(e) => {
-                        println!("[kbd] Warning: Failed to add scancode {:#x}: {:?}", sc, e);
-                    }
                 }
-            }
+
+                Ok(None) => {}
+
+                Err(e) => {
+                    println!("[kbd] Warning: Failed to add scancode {:#x}: {:?}", sc, e);
+                }
+            },
 
             None => {
                 println!("[kbd] Warning: Scancode stream ended unexpectedly!");

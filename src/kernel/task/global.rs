@@ -1,8 +1,8 @@
 extern crate alloc;
+use crate::kernel::task::{executor::Executor, task::Task};
 use alloc::sync::Arc;
 use crossbeam_queue::ArrayQueue;
 use spin::Mutex;
-use crate::kernel::task::{executor::Executor, task::Task};
 
 static GLOBAL_EXECUTOR: Mutex<Option<&'static mut Executor>> = Mutex::new(None);
 static SPAWN_QUEUE: Mutex<Option<Arc<ArrayQueue<Task>>>> = Mutex::new(None);
@@ -16,7 +16,9 @@ pub fn set_global_executor(executor: &'static mut Executor) {
 pub fn spawn_task(task: Task) {
     let guard = SPAWN_QUEUE.lock();
     if let Some(queue) = guard.as_ref() {
-        queue.push(task).unwrap_or_else(|_| panic!("Spawn queue full!"));
+        queue
+            .push(task)
+            .unwrap_or_else(|_| panic!("Spawn queue full!"));
     } else {
         panic!("Global executor not initialized");
     }

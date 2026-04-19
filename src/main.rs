@@ -10,7 +10,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("----------- xv0 OS -----------");
     println!("Initializing kernel...");
     xv0::kernel::init(boot_info);
-    
+
     println!("Done! Starting executor...");
     println!("------------ DONE ------------");
     start_executor();

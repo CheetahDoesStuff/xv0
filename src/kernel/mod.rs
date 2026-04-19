@@ -1,7 +1,10 @@
-use bootloader::BootInfo;
 use alloc::boxed::Box;
+use bootloader::BootInfo;
 
-use crate::{kernel::task::{executor::Executor, global::{spawn_task}}, println};
+use crate::{
+    kernel::task::{executor::Executor, global::spawn_task},
+    println,
+};
 
 extern crate alloc;
 
@@ -9,9 +12,9 @@ pub mod cpu;
 pub mod drivers;
 pub mod memory;
 pub mod serial;
+pub mod shutdown;
 pub mod task;
 pub mod vga_buffer;
-pub mod shutdown;
 
 pub fn init(boot_info: &'static BootInfo) {
     println!("  - Initializing Global Descriptor Table (GDT)...");
@@ -33,10 +36,14 @@ pub fn init(boot_info: &'static BootInfo) {
 
     println!("  - Initializing keyboard...");
     crate::kernel::task::keyboard::keyboard::ScancodeStream::new();
-    spawn_task(crate::kernel::task::task::Task::new(crate::kernel::task::keyboard::keyboard::keyboard_dispatcher()));
+    spawn_task(crate::kernel::task::task::Task::new(
+        crate::kernel::task::keyboard::keyboard::keyboard_dispatcher(),
+    ));
 
     println!("Spawning userspace...");
-    spawn_task(crate::kernel::task::task::Task::new(crate::userspace::main::userspace()));
+    spawn_task(crate::kernel::task::task::Task::new(
+        crate::userspace::main::userspace(),
+    ));
 }
 
 pub fn start_executor() {

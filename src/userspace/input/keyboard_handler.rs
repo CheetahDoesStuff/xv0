@@ -3,7 +3,16 @@ extern crate alloc;
 use alloc::string::String;
 use pc_keyboard::KeyCode;
 
-use crate::{kernel::{task::keyboard::{interface::{is_key_down, next_pressed_key}, keyboard::KeyEvent}, vga_buffer::backspace}, print, println};
+use crate::{
+    kernel::{
+        task::keyboard::{
+            interface::{is_key_down, next_pressed_key},
+            keyboard::KeyEvent,
+        },
+        vga_buffer::backspace,
+    },
+    print, println,
+};
 
 pub async fn read_line(print_input: bool, allow_shift_enter: bool) -> String {
     let mut line = String::new();
@@ -12,9 +21,10 @@ pub async fn read_line(print_input: bool, allow_shift_enter: bool) -> String {
         let key = next_pressed_key().await;
         match key {
             KeyEvent::Unicode(ch) => {
-                if (ch == '\n' || ch == '\r') && 
-                    !((is_key_down(KeyCode::LShift) || is_key_down(KeyCode::RShift)) && allow_shift_enter) {
-
+                if (ch == '\n' || ch == '\r')
+                    && !((is_key_down(KeyCode::LShift) || is_key_down(KeyCode::RShift))
+                        && allow_shift_enter)
+                {
                     if print_input {
                         println!();
                     }
@@ -39,8 +49,6 @@ pub async fn read_line(print_input: bool, allow_shift_enter: bool) -> String {
 
     line
 }
-
-
 
 pub async fn print_keypresses() {
     crate::println!("Press keys to see their decoded output...");

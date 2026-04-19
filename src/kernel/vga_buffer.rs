@@ -45,7 +45,9 @@ impl Writer {
 
     pub fn backspace(&mut self) {
         if self.col == 0 {
-            if self.row == 0 { return; }
+            if self.row == 0 {
+                return;
+            }
             self.row -= 1;
             self.col = COLS - 1;
         } else {
@@ -66,11 +68,7 @@ impl Writer {
     fn scroll(&mut self) {
         let fb = FRAMEBUFFER as *mut u8;
         unsafe {
-            core::ptr::copy(
-                fb.add(WIDTH * CHAR_H),
-                fb,
-                WIDTH * (HEIGHT - CHAR_H),
-            );
+            core::ptr::copy(fb.add(WIDTH * CHAR_H), fb, WIDTH * (HEIGHT - CHAR_H));
             for i in WIDTH * (HEIGHT - CHAR_H)..WIDTH * HEIGHT {
                 fb.add(i).write_volatile(COLOR_BG);
             }

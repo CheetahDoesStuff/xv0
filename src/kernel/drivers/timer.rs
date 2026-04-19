@@ -1,5 +1,5 @@
-use core::sync::atomic::{AtomicU64, Ordering};
 use crate::kernel::cpu::interrupts::{InterruptIndex, PICS};
+use core::sync::atomic::{AtomicU64, Ordering};
 
 static TICKS: AtomicU64 = AtomicU64::new(0);
 
@@ -26,5 +26,12 @@ pub fn init_pit() {
         Port::<u8>::new(0x43).write(0x36);
         Port::<u8>::new(0x40).write((divisor & 0xFF) as u8);
         Port::<u8>::new(0x40).write((divisor >> 8) as u8);
+    }
+}
+
+pub fn wait_ms(ms: u64) {
+    let start = TICKS.load(Ordering::Relaxed);
+    while TICKS.load(Ordering::Relaxed) - start < ms {
+        core::hint::spin_loop();
     }
 }
