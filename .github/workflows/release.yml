@@ -31,11 +31,11 @@ jobs:
         run: curl -L -o doom1.wad https://raw.githubusercontent.com/redox-os/freedoom/master/doom1.wad
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo bootimage --release
 
       - name: Create image
         run: |
-          BIN="target/x86_64-cheetah-vx0/release/xv0"
+          BIN="target/x86_64-cheetah-vx0/release/bootimage-xv0.bin"
           IMG="xv0-release-${{ github.ref_name }}.img"
           cp "$BIN" "$IMG"
           echo "IMG=$IMG" >> $GITHUB_ENV
