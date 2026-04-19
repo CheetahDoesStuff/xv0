@@ -21,7 +21,9 @@ jobs:
           components: rust-src
 
       - name: Install bootimage
-        run: cargo install bootimage
+        run: |
+          cargo install bootimage
+          rustup component add llvm-tools-preview
 
       - name: Cache doom1.wad
         id: cache-wad
