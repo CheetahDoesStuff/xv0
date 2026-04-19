@@ -33,7 +33,7 @@ jobs:
 
       - name: Create image
         run: |
-          BIN="target/x86_64-cheetah-vx0/release/bootimage-xv0.bin"
+          BIN="target/x86_64-cheetah-vx0/release/xv0"
           IMG="xv0-release-${{ github.ref_name }}.img"
           cp "$BIN" "$IMG"
           echo "IMG=$IMG" >> $GITHUB_ENV
