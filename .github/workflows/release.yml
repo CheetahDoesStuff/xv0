@@ -12,8 +12,10 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Install Rust (nightly)
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
 
       - name: Cache doom1.wad
         id: cache-wad
@@ -27,7 +29,7 @@ jobs:
         run: curl -L -o doom1.wad https://raw.githubusercontent.com/redox-os/freedoom/master/doom1.wad
 
       - name: Build release binary
-        run: cargo build --release
+        run: cargo +nightly build --release -Z build-std=core,alloc -Z json-target-spec=./x86_64-cheetah-vx0.json
 
       - name: Create image
         run: |
