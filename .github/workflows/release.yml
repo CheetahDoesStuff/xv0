@@ -29,7 +29,7 @@ jobs:
         run: curl -L -o doom1.wad https://raw.githubusercontent.com/redox-os/freedoom/master/doom1.wad
 
       - name: Build release binary
-        run: cargo +nightly build --release -Z build-std=core,alloc -Z json-target-spec=./x86_64-cheetah-vx0.json
+        run: cargo build --release
 
       - name: Create image
         run: |
