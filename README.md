@@ -3,7 +3,19 @@
 
 **This OS is a hobby project, its very minimal and incomplete! Made for the "boot" hackclub YSWS**
 
-## Running it
+## Running it - From release
+**NOTE:** I have yet to try it on real hardware, and right now its only recommended to run through qemu, as shown below.
+
+### Getting the image
+Just go to the [latest release](https://github.com/CheetahDoesStuff/xv0/releases/latest) and download the .img file!
+
+### Run with qemu
+Run the file in qemu (replace the file parameter with your actual filename):
+```sh
+qemu-system-x86_64 -drive format=raw,file=xv0-release-VERSION.img
+```
+
+## Running it - From source
 **NOTE:** I have yet to try it on real hardware, and right now its only recommended to run through qemu, as shown below.
 
 ### Requirements
